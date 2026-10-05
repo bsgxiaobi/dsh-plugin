@@ -138,8 +138,36 @@ DSH 会在进程内缓存插件的模块解析结果，所以**首次挂载、�
 ├── docs/
 │   └── dsh-plugin-dev-notes.md    DSH 插件平台的实测笔记（本仓库最有价值的文件）
 └── tools/
-    └── extract-asar.mjs           把 DSH 的 app.asar 解包成可读源码树（纯 Node，零依赖）
+    ├── extract-asar.mjs           把 DSH 的 app.asar 解包成可读源码树（纯 Node，零依赖）
+    ├── contract.json              两个插件依赖的 DSH 内部契约清单（机器可读）
+    └── check-contract.mjs         对照任意一份 DSH 构建校验契约
 ```
+
+## DSH 升级后：一条命令查兼容性
+
+两个插件依赖的全是 DSH 内部实现，没有 API 承诺。所以仓库把它们**逐条登记**在
+[`tools/contract.json`](tools/contract.json) 里（28 条符号契约 + 1 条 peer 版本契约），
+升级 DSH 后跑一次校验，不必手工翻代码：
+
+```powershell
+# 一站式：直接对着装好的 app.asar 跑（自动解包到临时目录，跑完清理，约 25 秒）
+node tools/check-contract.mjs --asar "C:\Users\<你>\AppData\Local\Programs\DeepSeek Harness\resources\app.asar"
+
+# 或者两步走：先解包再检查（保留解包树，方便接着翻源码）
+node tools/extract-asar.mjs "<app.asar>" "%TEMP%\dsh-src"
+node tools/check-contract.mjs "%TEMP%\dsh-src"
+```
+
+输出逐条标 `✓/✗`，标 ✗ 的会带上「用在哪个插件的第几行」「为什么依赖它」和一条自查命令，
+同时比对 peer 版本范围。**退出码 0 = 兼容，1 = 有需要处理的面。**
+
+`check-contract.mjs --lint` 只体检契约文件本身（不需要 DSH），CI
+（[.github/workflows/check.yml](.github/workflows/check.yml)）在每次 push 时跑它，
+外加全部 JS 语法检查与 `verify-meta.mjs` 的真实解析断言。
+
+> **契约检查覆盖不到的**：符号还在、但**语义变了** —— 例如行号从 1-based 改成 0-based，
+> 或 `captureInsertion()` 的 `draftRev` 语义变化。这类只能靠下面的人工回归兜底。
+> 改代码时如果新增了对 DSH 内部锚点/接口的依赖，记得往 `contract.json` 补一条，否则下轮升级会出现盲区。
 
 ## 开发
 
@@ -159,7 +187,11 @@ DSH 会在进程内缓存插件的模块解析结果，所以**首次挂载、�
 元数据自检（图标、中文标题、各语言下的最终文案）：
 
 ```powershell
+# 从当前 profile 解析（插件已安装时）
 node dsh-plugin-send-to-chat/verify-meta.mjs
+
+# 或指定任意 profile 目录
+node dsh-plugin-send-to-chat/verify-meta.mjs "<DSH_HOME>/profiles/desktop"
 ```
 
 查阅 DSH 内部实现（解包 `app.asar`）：
@@ -169,6 +201,13 @@ node tools/extract-asar.mjs `
   "C:\Users\<你>\AppData\Local\Programs\DeepSeek Harness\resources\app.asar" `
   "<任意输出目录>"
 ```
+
+改动生效后的人工回归（契约检查替代不了）：
+
+- 右键一个文件 → 菜单 → 点击 → 输入框出现引用 chip
+- 右键一个目录 → 输入框出现 `@dir/`
+- 预览里选中若干行后右键 → 菜单标题带行号 → 输入框出现 `@path#n-m`
+- 插入目标是**当前可见 / 聚焦**的那个输入框
 
 ## 许可证
 

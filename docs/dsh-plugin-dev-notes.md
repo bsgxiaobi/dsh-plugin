@@ -224,7 +224,31 @@ shell.notify(level, text);                               // 用户可见提示
 
 ## 11. DSH 升级后怎么办
 
-按**脆弱度**排序（越靠前越容易坏）：
+### 11.1 自动化：一条命令对照契约（首选）
+
+依赖面已经机器可读了 —— `tools/contract.json` 逐条列出两个插件用到的 DSH 内部符号
+（28 条符号契约 + 1 条 peer 版本契约），升级 DSH 后跑：
+
+```powershell
+# 一站式：直接对着装好的 app.asar 跑（自动解包到临时目录，跑完清理）
+node tools/check-contract.mjs --asar "C:\Users\<你>\AppData\Local\Programs\DeepSeek Harness\resources\app.asar"
+
+# 或者两步：先解包再检查（保留解包树，方便接着翻源码）
+node tools/extract-asar.mjs "<app.asar>" "%TEMP%\dsh-src"
+node tools/check-contract.mjs "%TEMP%\dsh-src"
+```
+
+它会把每条契约标 `✓/✗`，✗ 的带上「用在哪个插件文件第几行」「为什么依赖它」和一条自查 `rg` 命令，
+并比对 peer 版本范围。**退出码 0 = 兼容，1 = 有面需要改。**
+
+每次 push 时 CI（`.github/workflows/check.yml`）会跑不需要 DSH 的那部分：
+`--lint` 契约清单体检、全部 JS 语法检查、`verify-meta.mjs` 真实解析元数据
+（断言 `languages found: en, zh`、中文标题、图标 media type）。
+
+**它查不出来的**：符号还在但**语义变了**。例如 `data-textpreview-line` 仍在，但行号改成 0-based；
+或 `captureInsertion()` 的 `draftRev` 语义变了。这类只能靠 11.3 的交互回归。
+
+### 11.2 脆弱度排序（决定先看哪里）
 
 1. **DOM 锚点**（最脆）：`data-files-path`、`data-textpreview-line`、`data-code-preview`、`data-composer-input`、`data-conversation-session`
 2. **composer 插入接口**：`input.shell()` / `captureInsertion()` / `insertText()` / `insertReference()`
@@ -235,6 +259,8 @@ shell.notify(level, text);                               // 用户可见提示
 自检顺序：
 
 ```
+0. node tools/check-contract.mjs --asar "<app.asar>"
+                                   → 28 条符号 + 1 条版本契约全部 ✓ ？
 1. plugin_manager list_plugins     → 条目 enabled + fiberPhase: active ？
 2. cordis_inspect_query(client, Slots, listSubTree, {"root":"shell.overlay"})
                                    → occupants 里有 id "send-to-chat" ？
@@ -246,7 +272,11 @@ shell.notify(level, text);                               // 用户可见提示
    - 插入目标是当前可见 / 聚焦的输入框
 ```
 
-第 2 步通过 = 宿主与浏览器端都加载成功；第 4 步失败 = DOM 锚点需要按新版实际属性更新。
+第 0 步通过 = 依赖的内部符号都还在；第 2 步通过 = 宿主与浏览器端都加载成功；
+**第 4 步失败 = DOM 锚点还在但语义变了**（这才是契约检查覆盖不到的那部分）。
+
+记完契约变更后，别忘同步更新 `tools/contract.json`（加了新的锚点/接口就补一条），
+否则下一轮升级的检查会出现盲区。
 
 **版本兼容**：`send-to-chat` 的 peer 是 `@deepseek-ai/cordis: ~4.0.4`（DSH 0.2.0-rc.2 内即 4.0.4）。
 DSH 升到 cordis 4.1+ 时插件管理器会拒绝安装（可用版本豁免强装，但有崩溃风险）。

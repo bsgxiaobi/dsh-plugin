@@ -1,0 +1,52 @@
+name: check
+
+# 每次 push / PR 都跑「不需要 DSH 也能跑」的那部分：
+#   1. 契约清单自身体检（防止 tools/contract.json 烂掉）
+#   2. 全部 JS 语法检查
+#   3. 插件元数据（exports / locale / icon）真实解析一遍
+#
+# 需要 DSH 本体的那部分（对照 DSH 内部符号）跑不了 —— CI 里没有 DSH。
+# DSH 升级后在本地跑一次即可，见 README「开发」一节：
+#   node tools/check-contract.mjs --asar "<app.asar>"
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    name: 语法 / 元数据 / 契约清单
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 契约清单体检（不需要 DSH）
+        run: node tools/check-contract.mjs --lint
+
+      - name: 语法检查
+        run: |
+          status=0
+          while IFS= read -r file; do
+            echo "checking $file"
+            node --check "$file" || status=1
+          done < <(git ls-files '*.js' '*.mjs')
+          exit $status
+
+      - name: 插件元数据（exports / locale / icon）
+        run: |
+          # verify-meta.mjs 从 profile 的 node_modules 解析包名，这里造一个最小 profile。
+          mkdir -p /tmp/profile/node_modules
+          ln -s "$PWD/dsh-plugin-send-to-chat" /tmp/profile/node_modules/dsh-plugin-send-to-chat
+          output=$(node dsh-plugin-send-to-chat/verify-meta.mjs /tmp/profile)
+          printf '%s\n' "$output"
+          grep -q 'languages found: en, zh' <<<"$output" || { echo '::error::locale 没有被解析到（检查 package.json 的 exports）'; exit 1; }
+          grep -q '发送到对话框' <<<"$output" || { echo '::error::缺少中文标题'; exit 1; }
+          grep -q 'media type image/svg+xml' <<<"$output" || { echo '::error::图标没有被解析到'; exit 1; }

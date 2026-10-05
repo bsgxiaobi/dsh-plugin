@@ -1,0 +1,252 @@
+{
+  "$comment": [
+    "本仓库两个插件依赖的 DSH 内部契约清单 —— 用 tools/check-contract.mjs 校验。",
+    "DSH 没有公开 API 承诺，这些符号全部来自 app.asar 解包出的实现；升级 DSH 后跑一次校验即可。",
+    "每条 = 「插件里的哪一行依赖了什么」，needles 命中任意一个即算通过。",
+    "kind: dom-anchor | composer-api | slot | host-event | host-service | host-api | client-module"
+  ],
+
+  "dsh": {
+    "manifest": "dsh/package.json",
+    "name": "@deepseek-ai/dsh-desktop-runtime",
+    "tested": "0.2.0-rc.2",
+    "peers": [
+      {
+        "plugin": "dsh-plugin-send-to-chat",
+        "package": "@deepseek-ai/cordis",
+        "expected": "~4.0.4",
+        "source": "dsh-plugin-send-to-chat/package.json"
+      }
+    ]
+  },
+
+  "requirements": [
+    {
+      "id": "dom.files.entry",
+      "plugin": "send-to-chat",
+      "kind": "dom-anchor",
+      "needles": ["data-files-entry"],
+      "usedAt": "dsh-plugin-send-to-chat/lib/client.js:52",
+      "why": "工作区文件树的每一行（entry = file/directory/other）"
+    },
+    {
+      "id": "dom.files.path",
+      "plugin": "send-to-chat",
+      "kind": "dom-anchor",
+      "needles": ["data-files-path"],
+      "usedAt": "dsh-plugin-send-to-chat/lib/client.js:466",
+      "why": "文件树行的绝对路径"
+    },
+    {
+      "id": "dom.files.root",
+      "plugin": "send-to-chat",
+      "kind": "dom-anchor",
+      "needles": ["data-files-root"],
+      "usedAt": "dsh-plugin-send-to-chat/lib/client.js:470",
+      "why": "文件树根（= 会话 cwd），用于算相对路径"
+    },
+    {
+      "id": "dom.preview.state",
+      "plugin": "send-to-chat",
+      "kind": "dom-anchor",
+      "needles": ["data-textpreview-state"],
+      "usedAt": "dsh-plugin-send-to-chat/lib/client.js:54",
+      "why": "已加载的文本/代码预览容器"
+    },
+    {
+      "id": "dom.preview.plain",
+      "plugin": "send-to-chat",
+      "kind": "dom-anchor",
+      "needles": ["data-textpreview-plain"],
+      "usedAt": "dsh-plugin-send-to-chat/lib/client.js:56",
+      "why": "纯文本渲染器的行容器"
+    },
+    {
+      "id": "dom.preview.line",
+      "plugin": "send-to-chat",
+      "kind": "dom-anchor",
+      "needles": ["data-textpreview-line"],
+      "usedAt": "dsh-plugin-send-to-chat/lib/client.js:238",
+      "why": "纯文本渲染器的第 n 行（行号来源）"
+    },
+    {
+      "id": "dom.preview.url",
+      "plugin": "send-to-chat",
+      "kind": "dom-anchor",
+      "needles": ["data-textpreview-url"],
+      "usedAt": "dsh-plugin-send-to-chat/lib/client.js:66",
+      "why": "预览资源的 dsh-resource:// 地址，用于反解文件路径"
+    },
+    {
+      "id": "dom.preview.path",
+      "plugin": "send-to-chat",
+      "kind": "dom-anchor",
+      "needles": ["data-textpreview-path"],
+      "usedAt": "dsh-plugin-send-to-chat/lib/client.js:68",
+      "why": "预览文件显示的路径"
+    },
+    {
+      "id": "dom.code.line",
+      "plugin": "send-to-chat",
+      "kind": "dom-anchor",
+      "needles": ["data-code-preview"],
+      "usedAt": "dsh-plugin-send-to-chat/lib/client.js:58",
+      "why": "代码渲染器的行容器（行号 = 1-based 序号）"
+    },
+    {
+      "id": "dom.composer.input",
+      "plugin": "send-to-chat",
+      "kind": "dom-anchor",
+      "needles": ["data-composer-input"],
+      "usedAt": "dsh-plugin-send-to-chat/lib/client.js:60",
+      "why": "Lexical 编辑器根；isContentEditable 决定能否插入"
+    },
+    {
+      "id": "dom.conversation.session",
+      "plugin": "send-to-chat",
+      "kind": "dom-anchor",
+      "needles": ["data-conversation-session"],
+      "usedAt": "dsh-plugin-send-to-chat/lib/client.js:62",
+      "why": "会话容器；属性值即 sessionId（插入目标归属判定）"
+    },
+    {
+      "id": "api.composer.captureInsertion",
+      "plugin": "send-to-chat",
+      "kind": "composer-api",
+      "needles": ["captureInsertion"],
+      "usedAt": "dsh-plugin-send-to-chat/lib/client.js:384",
+      "why": "取当前插入点 { start, end, draftRev }"
+    },
+    {
+      "id": "api.composer.insertText",
+      "plugin": "send-to-chat",
+      "kind": "composer-api",
+      "needles": ["insertText"],
+      "usedAt": "dsh-plugin-send-to-chat/lib/client.js:386",
+      "why": "插入纯文本（行范围走这条）"
+    },
+    {
+      "id": "api.composer.insertReference",
+      "plugin": "send-to-chat",
+      "kind": "composer-api",
+      "needles": ["insertReference"],
+      "usedAt": "dsh-plugin-send-to-chat/lib/client.js:391",
+      "why": "插入真正的引用 chip（文件/目录走这条）"
+    },
+    {
+      "id": "slot.shell.overlay",
+      "plugin": "send-to-chat",
+      "kind": "slot",
+      "needles": ["shell.overlay"],
+      "usedAt": "dsh-plugin-send-to-chat/lib/client.js:633",
+      "why": "框架级浮层 —— 本插件唯一的 slot 注册点（自绘右键菜单）"
+    },
+    {
+      "id": "slot.settings.plugins.tab",
+      "plugin": "notify",
+      "kind": "slot",
+      "needles": ["settings.plugins.tab"],
+      "usedAt": "dsh-plugin-notify-and-sound/client.js:1086",
+      "why": "设置页里的插件页签 —— 「通知与提示音」配置页挂在这里"
+    },
+    {
+      "id": "svc.webServer",
+      "plugin": "notify",
+      "kind": "host-service",
+      "needles": [],
+      "regex": "[\"']webServer[\"']",
+      "usedAt": "dsh-plugin-notify-and-sound/host.js:30",
+      "why": "插件 Web 路由注册表（SSE 推送通道 / 设置读写 / 音源服务）"
+    },
+    {
+      "id": "api.webServer.register.exact",
+      "plugin": "notify",
+      "kind": "host-api",
+      "needles": ["kind: 'exact'", "kind: \"exact\""],
+      "regex": "kind:\\s*[\"']exact[\"']",
+      "usedAt": "dsh-plugin-notify-and-sound/host.js:802",
+      "why": "webServer.register({ kind: 'exact', path, handler }) 的路由形状"
+    },
+    {
+      "id": "evt.agent.status",
+      "plugin": "notify",
+      "kind": "host-event",
+      "needles": ["agent/status"],
+      "usedAt": "dsh-plugin-notify-and-sound/host.js:830",
+      "why": "会话由 running 转 idle（= 一轮完成）时的通知触发点"
+    },
+    {
+      "id": "evt.agent.disposed",
+      "plugin": "notify",
+      "kind": "host-event",
+      "needles": ["agent/disposed"],
+      "usedAt": "dsh-plugin-notify-and-sound/host.js:845",
+      "why": "会话销毁时清理通知状态"
+    },
+    {
+      "id": "evt.tools.pre-execute",
+      "plugin": "notify",
+      "kind": "host-event",
+      "needles": ["tools/pre-execute"],
+      "usedAt": "dsh-plugin-notify-and-sound/host.js:886",
+      "why": "工具即将执行 —— 用于识别 ask_user_question 等待"
+    },
+    {
+      "id": "evt.user-questions.request",
+      "plugin": "notify",
+      "kind": "host-event",
+      "needles": ["user-questions/request"],
+      "usedAt": "dsh-plugin-notify-and-sound/host.js:900",
+      "why": "Agent 需要你选择时的通知触发点"
+    },
+    {
+      "id": "evt.approval.request",
+      "plugin": "notify",
+      "kind": "host-event",
+      "needles": ["approval/request"],
+      "usedAt": "dsh-plugin-notify-and-sound/host.js:912",
+      "why": "工具等待授权时的通知触发点"
+    },
+    {
+      "id": "svc.agents",
+      "plugin": "notify",
+      "kind": "host-service",
+      "needles": [],
+      "regex": "[\"']agents[\"']",
+      "usedAt": "dsh-plugin-notify-and-sound/host.js:452",
+      "why": "枚举活动会话（ctx.get('agents').list()）"
+    },
+    {
+      "id": "client.baseline.react",
+      "plugin": "shared",
+      "kind": "client-module",
+      "needles": ["react/jsx-runtime"],
+      "usedAt": "两个插件的浏览器端 require",
+      "why": "基线模块：浏览器端不写进 external 也能 require"
+    },
+    {
+      "id": "meta.readPluginMeta",
+      "plugin": "shared",
+      "kind": "host-api",
+      "needles": ["readPluginMeta"],
+      "usedAt": "两个插件的 locale/icon 展示",
+      "why": "读取插件标题/说明/图标的入口（改 exports 要重启的那个缓存就在这条链上）"
+    },
+    {
+      "id": "meta.optionalResourcePath",
+      "plugin": "shared",
+      "kind": "host-api",
+      "needles": ["optionalResourcePath"],
+      "usedAt": "两个插件的 locale/icon 展示",
+      "why": "解析 locale/*.json 与 package.json 子路径（走 Node 内部 ESM 解析器）"
+    },
+    {
+      "id": "compat.evaluatePluginCompatibility",
+      "plugin": "shared",
+      "kind": "host-api",
+      "needles": ["evaluatePluginCompatibility"],
+      "usedAt": "安装时的 peer 版本预检",
+      "why": "DSH 自己的兼容性预检 —— 插件管理器据此拒绝安装"
+    }
+  ]
+}
