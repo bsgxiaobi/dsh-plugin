@@ -26,12 +26,11 @@
 
 ## 安装
 
-本仓库已作为一个 **DSH bundle** 安装到 desktop 配置中：
+本插件已作为一个 **DSH bundle** 安装到 desktop profile（`<DSH_HOME>/profiles/desktop/package.json`）：
 
 ```jsonc
-// ~/.dsh/profiles/desktop/package.json
 {
-  "dependencies": { "dsh-plugin-send-to-chat": "link:D:/ai/project/dsh-plugin/dsh-plugin-send-to-chat" },
+  "dependencies": { "dsh-plugin-send-to-chat": "link:D:/plugins/dsh-plugin-send-to-chat" },
   "dsh": { "profile": { "bundles": ["@deepseek-ai/dsh-base", "@deepseek-ai/dsh-web-app", "dsh-plugin-send-to-chat"] } }
 }
 ```
@@ -41,18 +40,18 @@
 手工安装（不使用插件管理器）：
 
 ```yaml
-# ~/.dsh/profiles/desktop/cordis.patch.yml
+# <DSH_HOME>/profiles/desktop/cordis.patch.yml
 - insert:
     - id: send-to-chat
       name: 'dsh-plugin-send-to-chat'
 ```
 
-`insert` 的 `name` 也接受**绝对路径**，例如 `name: 'D:/ai/project/dsh-plugin/dsh-plugin-send-to-chat'`，此时无需 `pnpm install`。
+`insert` 的 `name` 也接受**绝对路径**，例如 `name: 'D:/plugins/dsh-plugin-send-to-chat'`，此时无需 `pnpm install`。
 
 改完客户端代码后刷新页面即可生效；改 `package.json`（尤其是 `exports`）必须重启 DSH。
 
-> 本插件源码由 `D:\ai\project\dsh-plugin` 仓库统一管理（2026-10 从独立目录 `D:\ai\project\dsh-plugin-send-to-chat` 迁入）。
-> DSH 内部实现结论见仓库的 [`../docs/dsh-plugin-dev-notes.md`](../docs/dsh-plugin-dev-notes.md)。
+> 安装到其他机器、以及「只装其中一个插件」的说明见仓库根部的 [`../README.md`](../README.md)；
+> DSH 内部实现结论见 [`../docs/dsh-plugin-dev-notes.md`](../docs/dsh-plugin-dev-notes.md)。
 
 ## 安装到另一台电脑
 
@@ -87,7 +86,7 @@
 
 ### 方法 C：走插件管理器（可从界面开关/卸载）
 
-拷贝文件夹后，在 DSH 里用插件管理器以该**绝对路径**作为 spec 安装；它会把依赖写成链接并登记到 `dsh.profile.bundles`，之后能在 设置 → 插件 里启停和卸载。本机就是这么装的。
+拷贝文件夹后，在 DSH 里用插件管理器以该**绝对路径**作为 spec 安装；它会把依赖写成链接并登记到 `dsh.profile.bundles`，之后能在 设置 → 插件 里启停和卸载。**这是最省事、也最常用的方式。**
 
 ### 方法 D：打包传递
 
@@ -108,7 +107,7 @@ npm publish --access public      # 或推私有 registry
 
 | 项 | 要求 |
 |---|---|
-| cordis | `peerDependencies` 声明 `~4.0.4`（本机 `app.asar` 内为 4.0.4）。DSH 升级到 cordis 4.1+ 时插件管理器会拒绝安装 |
+| cordis | `peerDependencies` 声明 `~4.0.4`（DSH 0.2.0-rc.2 的 `app.asar` 内即 4.0.4）。DSH 升级到 cordis 4.1+ 时插件管理器会拒绝安装 |
 | DSH 客户端版本 | 插件依赖宿主发布的 `data-*` 锚点（`data-files-path`、`data-textpreview-line`、`data-code-preview` 等）与 `ctx.get('conversation').input` 接口。本插件针对 **0.2.0-rc.2** 开发；目标机器 DSH 版本差异较大时需要重新核对 `lib/client.js` 顶部的选择器常量 |
 | Node | 安装脚本用 `install.mjs`，需要 Node 18+（仅用内置模块） |
 

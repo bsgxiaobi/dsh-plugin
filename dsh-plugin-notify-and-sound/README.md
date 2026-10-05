@@ -7,9 +7,9 @@
 - 提示音音源可**手动配置**：3 个内置音效 + 1 个自定义文件，自定义文件用**系统文件选择框**挑。
 - 全部设置都能在**页面**上改：**设置 → 插件 → 通知与提示音**。
 
-> 目录名说明：本目录 2026-10 由 `dsh-plugin-notifiy-and-sound`（拼错）改名为 `dsh-plugin-notify-and-sound`。
-> **包名始终是 `@local/dsh-notify-sound`**，bundle 清单与 `link:` 依赖用的都是包名，不受目录名影响。
-> 源码由 `D:\ai\project\dsh-plugin` 仓库统一管理；DSH 内部实现结论见仓库的
+> **目录名与包名不同**：目录是 `dsh-plugin-notify-and-sound`，包名是 `@local/dsh-notify-sound`。
+> bundle 清单与 `link:` 依赖用的是**包名**，按路径安装时用**目录**，别混用。
+> 安装说明见仓库根部的 [`../README.md`](../README.md)；DSH 内部实现结论见
 > [`../docs/dsh-plugin-dev-notes.md`](../docs/dsh-plugin-dev-notes.md)。
 
 ## 安装
