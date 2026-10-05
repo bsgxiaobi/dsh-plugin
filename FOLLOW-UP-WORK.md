@@ -16,7 +16,7 @@
 | 3 | 迁移决策 D1–D7 | ✅ **已决策** | 见 §2 |
 | 4 | `web` profile 未安装插件 | ✅ 决策：**不装**（D5） | — |
 | 5 | 插件中文标题/说明 + 图标是否生效 | ⏳ 待 **DSH 重启**后确认（本机 CLI 已跑通 `verify-meta.mjs`，见 §3） | 用户重启 → 可自动验证 |
-| 6 | 推送 GitHub | ⚠️ **仍阻塞**：账号已登录，但 fine-grained token 缺 `Contents: write`；本地已 commit，等授权后一条命令即可推（§2.1） | 用户 |
+| 6 | 推送 GitHub | ✅ **已完成** 2026-10-05：`cc6f9d3` 已在 `origin/main`，本地与远程一致；走过弯路见 MIGRATION-CHECKLIST.md §8.5 | — |
 | 7 | `docs/dsh-plugin-dev-notes.md` | ✅ **已落盘** | — |
 | 8 | `.dsh-src-ref`（355 MB 解包源码） | ✅ 决策：**保留**，并已写进仓库 `.gitignore` | — |
 | 9 | **`tools/extract-asar.mjs` 尚未收进仓库** | ✅ **已收进** `tools/extract-asar.mjs`（赶在 `%TEMP%` 被清理之前） | — |
@@ -59,19 +59,16 @@
 | **D6** | `.dsh-src-ref`（355 MB）保留还是删除 | **保留**，并写进仓库 `.gitignore`（它本来就在仓库之外，不会被跟踪）。 |
 | **D7** | 是否把 DSH 源码解包脚本收进仓库 | **收**，见 `tools/extract-asar.mjs`。 |
 
-### 2.1 ⚠️ 唯一剩下的阻塞：GitHub 推送权限
+### 2.1 GitHub 推送（已解决，留档）
 
-* 本地提交已完成（`main` 领先 `origin/main` 一个 commit），remote 已配置 `origin`（HTTPS）与 `ssh`（SSH）两个地址。
-* `origin`（HTTPS）推送失败：`403 Resource not accessible by personal access token`
-  —— 账号认证成功，但 fine-grained PAT **没有 `Contents: Read and write`**（或没把本仓库勾进它的可访问仓库列表）。
-  **重试无用**，必须改 token 权限或换一条授权通道。
-* 已验证 **SSH 通道本身是通的**（`ssh.github.com:22` 与 `:443` 均可建立连接），
-  只是本机 `~/.ssh/id_rsa` **尚未注册到 GitHub 账号**（`git@github.com: Permission denied (publickey)`）。
-* 两条出路，任选其一：
-  1. **把 `~/.ssh/id_rsa.pub` 加到账号**（一键预填链接见会话回复）→ 之后
-     `git -C D:\ai\project\dsh-plugin push ssh main:main` 即可，无需再动 token。
-  2. **给 token 补权限**：fine-grained token 的 *Repository access* 勾上 `bsgxiaobi/dsh-plugin`，
-     *Permissions → Repository permissions → Contents = Read and write* → 之后 `git push origin main`。
+* 本地提交与远程一致：`origin/main` = `cc6f9d3`（两个 commit：`26bf4ba` 导入 + `cc6f9d3` 文档）。
+* 之前失败的真正原因：fine-grained PAT 的 *Contents* 没有设成 **Read and write**
+  （需要 *Repository access* 覆盖本仓库 **且** *Contents = Read and write*，两处缺一即 403）。
+  另有网络间歇性超时会被误判成权限问题 —— 识别方法见 MIGRATION-CHECKLIST.md §8.5。
+* 仓库配了两个 remote：`origin`（HTTPS）+ `ssh`（备用）。SSH 通道可用，但需先把
+  `~/.ssh/id_rsa.pub` 注册到账号（`~/.ssh/config` 只对 github.com 声明了 id_rsa）。
+* ⚠️ 用的那个 token 若不再需要，建议到 **Settings → Developer settings → Personal access tokens** 里删掉。
+
 
 
 ---

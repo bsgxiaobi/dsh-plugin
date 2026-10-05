@@ -458,11 +458,11 @@ git -C $r remote -v                                          # 阶段 5 后应�
 | **4.2** 删除旧目录 | ✅ | 决策 **D1(a)**：两个旧目录已删除（删除前已做 SHA256 比对） |
 | **4.3** 处理旧 workspace 条目 | ✅ | 决策 **D2(a)**：从 `global.workspaceIds` 与 `tables.workspaces` 中移除 `e0598bfd-…`、`e03829e1-…`；JSON 语法已校验 |
 | **4.4** 启动 DSH 跑验证 | ⏳ | **待用户重启 DSH**（见 §8.4） |
-| **5.1 / 5.2 / 5.3** GitHub | ⚠️ | **未完成**：token 缺 `Contents: write`（403）；SSH 通道可达但本机公钥尚未注册。详见 §8.5 |
+| **5.1 / 5.2 / 5.3** GitHub | ✅ | 阶段 5 **已完成**：token 补齐 `Contents: Read and write` 后 `git push -u origin main` 成功，`origin/main` = `cc6f9d3`（详见 §8.5，含走过的弯路） |
 | **V1** 副本唯一性 | ✅ | `dsh-plugin` 与两个子目录存在且 `reparse=False`；两个旧路径**已不存在** |
 | **V7** 会话历史 | ✅ | 6 个桶目录全部原样保留；本对话所在桶 `--D-ai-project-dsh-plugin--` 完好，旧桶 `--D-ai-project-dsh-plugin-send-to-chat--` 内 `session-e29dbeb0-…` 实测 **1,519,939 字节（> 1 MB，且比迁移前更大）** |
 | **V8** 插件元数据 | ✅ | `node verify-meta.mjs` 输出 `languages found: en, zh`，`zh` 下 title=`发送到对话框`、icon=544 bytes SVG |
-| **V9** git 仓库 | ⚠️ | 本地 `status` 干净、无 `tgz/node_modules/.bak` 被跟踪；**远程推送未完成**（§8.5） |
+| **V9** git 仓库 | ✅ | 本地与远程一致（`left-right` 计数 `0 0`）、`status` 干净、无 `tgz/node_modules/.bak` 被跟踪；远程只有 `main` 一个分支、无 tag；GitHub 上实测 27 个 blob，与本地文件树一致 |
 | **V10** 功能回归 | ⏳ | **人工待办**，见 `FOLLOW-UP-WORK.md` §1 |
 
 ### 8.2 与清单的偏差（需要知道）
@@ -502,17 +502,37 @@ git commit -m "chore: import send-to-chat and notify-sound plugins"
 4. **侧边栏工作区列表**：应只剩 `draw`、`dsh-plugin`、`temp`；若两个旧工作区又冒出来，说明 DSH 在退出时把内存里的旧 `workspace.json` 写回了（§5 坑 G5），在 GUI 里删掉即可，或重新应用 §8.1 的 4.3 改动。
 5. **人工跑 `FOLLOW-UP-WORK.md` §1 的四项交互**。
 
-### 8.5 GitHub 推送的阻塞与出路
+### 8.5 GitHub 推送：走过的弯路与最终做法（**已解决**）
 
-* `origin`（HTTPS）推送返回 `403 Resource not accessible by personal access token`：
-  账号认证成功（`gh auth status` 显示 `bsgxiaobi`），但该 fine-grained PAT **没有 `Contents: Read and write`**
-  （或没把 `bsgxiaobi/dsh-plugin` 勾进它的可访问仓库列表）。**重试无效**。
-* 同时确认 **SSH 通道是通的**（`ssh.github.com:22`、`:443` 都能建连），
-  只是本机 `~/.ssh/id_rsa` / `id_ed25519` **尚未注册到该账号** → `git@github.com: Permission denied (publickey)`。
-* 仓库已配两个 remote：`origin` = HTTPS，`ssh` = `git@github.com:bsgxiaobi/dsh-plugin.git`。
-* 两条出路（任选其一）：
-  1. 在 GitHub 账号里加入本机公钥 `~/.ssh/id_rsa.pub`，然后
-     `git -C D:\ai\project\dsh-plugin push ssh main:main`；
-  2. 给 token 补权限（*Repository access* 勾本仓库；*Contents = Read and write*），然后 `git push origin main`。
-* 本地提交不会丢：`git status` 干净，`main` 领先 `origin/main` 一个 commit。
+**结果**：`git push -u origin main` 成功 → `67a7444..cc6f9d3  main -> main`；
+`origin/main` 与本地 `main` 同为 `cc6f9d3`，`rev-list --left-right --count` 为 `0  0`。
+
+**走过的弯路**（下次别再踩）：
+
+| # | 现象 | 真实原因 |
+|---|---|---|
+| 1 | `git push` 报 `Failed to connect to github.com port 443`（21 秒超时） | 与权限无关，是**网络间歇性抽风**：同一时刻 `git ls-remote`（读）能通、`push`（写）超时。重试即可自愈，**不要误判为 token 问题** |
+| 2 | `403 Resource not accessible by personal access token` | fine-grained PAT 的**权限没配到位**：需要 *Repository access* 覆盖本仓库，**并且** *Permissions → Repository permissions → Contents = Read and write*。两处缺一即 403，而报错文案**不会**告诉你是哪一处 |
+| 3 | `git@github.com: Permission denied (publickey)` | SSH 通道本身通（`ssh.github.com:22` 与 `:443` 均能建连），只是本机 `~/.ssh/id_rsa` **从未注册到该账号** |
+| 4 | 用 `gh api user/keys` 查已注册公钥 | 该接口需要 `read:public_key` 权限，**同一个受限 token 查不了** —— 别指望用它自证 |
+
+**诊断技巧**：想在不污染仓库的前提下验证 token 有没有写权限，用临时 ref 试：
+
+```powershell
+$sha = gh api repos/<owner>/<repo>/git/ref/heads/main --jq '.object.sha'
+'{"ref":"refs/heads/token-probe","sha":"' + $sha + '"}' |
+  gh api --method POST repos/<owner>/<repo>/git/refs --input -
+# 成功则立刻删掉：gh api --method DELETE repos/<owner>/<repo>/git/refs/heads/token-probe
+```
+
+**最终做法**：把 fine-grained PAT 的 *Contents* 改成 **Read and write**（`Metadata: Read-only` 是自动附带的，
+不用手动加；Repository access 用 `All repositories` 或勾中本仓库均可），然后
+`gh auth login --with-token` + `gh auth setup-git` + `git push -u origin main`。
+
+**备用通道（保留）**：仓库里配了第二个 remote `ssh` = `git@github.com:bsgxiaobi/dsh-plugin.git`。
+今后若 HTTPS 出问题，把 `~/.ssh/id_rsa.pub` 加到账号后 `git push ssh main:main` 即可。
+
+> ⚠️ 注意：`~/.ssh/config` 里 github.com **只声明了 `IdentityFile ~/.ssh/id_rsa`**（不是 ed25519），
+> 所以要走 SSH 就得注册 `id_rsa.pub`，注册 ed25519 不会被 ssh 提供（`ssh -v` 实测只 Offer id_rsa）。
+
 
