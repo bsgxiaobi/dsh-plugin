@@ -11,15 +11,16 @@
 
 | # | 事项 | 状态 | 负责 |
 |---|---|---|---|
-| 1 | **`send-to-chat` 的右键功能从未被人工验证** | ⚠️ **未验证** | 需 GUI 人工确认 |
-| 2 | 迁移本身（建仓库 / 移动 / 重指向 / git） | 未执行 | 待用户说「执行」 |
-| 3 | 迁移决策 D1–D4 | 未决策 | 用户 |
-| 4 | `web` profile 未安装插件 | 待定 | 用户 |
-| 5 | 插件中文标题/说明 + 图标是否生效 | 待 DSH 重启后确认 | 用户重启 → 可自动验证 |
-| 6 | `gh auth login` + 推送 GitHub | 阻塞于登录 | 用户登录 → 可自动推送 |
-| 7 | `docs/dsh-plugin-dev-notes.md` 尚未落盘 | 待定 | 可自动生成（素材见清单 §7） |
-| 8 | `.dsh-src-ref`（355 MB 解包源码）去留 | 待定 | 用户 |
-| 9 | **`tools/extract-asar.mjs` 尚未收进仓库**（脚本目前只在 `%TEMP%`，随时可能被清理） | ⏳ **有时效** | 可自动完成 |
+| 1 | **`send-to-chat` 的右键功能从未被人工验证** | ⚠️ **仍未验证** | 需 GUI 人工确认（§1） |
+| 2 | 迁移本身（建仓库 / 移动 / 重指向 / git） | ✅ **已执行** 2026-10-05（详见 MIGRATION-CHECKLIST.md 末尾「执行记录」） | — |
+| 3 | 迁移决策 D1–D7 | ✅ **已决策** | 见 §2 |
+| 4 | `web` profile 未安装插件 | ✅ 决策：**不装**（D5） | — |
+| 5 | 插件中文标题/说明 + 图标是否生效 | ⏳ 待 **DSH 重启**后确认（本机 CLI 已跑通 `verify-meta.mjs`，见 §3） | 用户重启 → 可自动验证 |
+| 6 | 推送 GitHub | ⚠️ **仍阻塞**：账号已登录，但 fine-grained token 缺 `Contents: write`；本地已 commit，等授权后一条命令即可推（§2.1） | 用户 |
+| 7 | `docs/dsh-plugin-dev-notes.md` | ✅ **已落盘** | — |
+| 8 | `.dsh-src-ref`（355 MB 解包源码） | ✅ 决策：**保留**，并已写进仓库 `.gitignore` | — |
+| 9 | **`tools/extract-asar.mjs` 尚未收进仓库** | ✅ **已收进** `tools/extract-asar.mjs`（赶在 `%TEMP%` 被清理之前） | — |
+
 
 ---
 
@@ -46,17 +47,32 @@
 
 ---
 
-## 2. 待你决策（会阻塞后续步骤）
+## 2. 决策结果（2026-10-05 已定，不再是待办）
 
-| 编号 | 决策 | 影响 |
+| 编号 | 决策 | 结果 |
 |---|---|---|
-| **D1** | 旧路径（`D:\ai\project\dsh-plugin-send-to-chat` 等）**留不留 junction 垫片** | (a) 删掉 → 仓库最干净，但旧会话（含本次对话）从此只能当历史阅读<br>(b) 保留 → 旧会话继续可用，代价是多一层路径间接 |
-| **D2** | `workspace.json` 里旧的两个 workspace 条目 | (a) 删除（日志文件保留）(b) 保留（若旧路径已删，侧边栏会出现失效工作区） |
-| **D3** | `dsh-plugin-notifiy-and-sound` 目录名拼写是否改为 `notify` | 包名 `@local/dsh-notify-sound` 本来就对，只有**目录名**拼错。趁迁移改动最便宜 |
-| **D4** | 是否生成 `docs/dsh-plugin-dev-notes.md` | 建议要 —— 否则下一台电脑/下一个会话要把 DSH 内部实现重挖一遍 |
-| **D5** | `web` profile 是否也安装插件 | 装了的话 `web` 组合也有此功能；一条命令 `node install.mjs web` |
-| **D6** | `.dsh-src-ref`（355 MB）保留还是删除 | 见 §6 |
-| **D7** | 是否把 DSH 源码解包脚本收进仓库 | 见 §6.3 |
+| **D1** | 旧路径留不留 junction 垫片 | **(a) 删除**。`D:\ai\project\dsh-plugin-send-to-chat` 与 `...\dsh-plugin-notifiy-and-sound` 已删除，磁盘上每个插件**只剩一份代码**（新仓库里那份）。代价：两个旧会话只能作为历史阅读。 |
+| **D2** | `workspace.json` 里旧的两个 workspace 条目 | **(a) 删除**。会话日志文件原样保留在 `%DSH_HOME%\sessions\` 下，只是不再出现在侧边栏。 |
+| **D3** | `notifiy` 目录名是否改为 `notify` | **(a) 改**。现为 `dsh-plugin-notify-and-sound`；**包名 `@local/dsh-notify-sound` 不变**（bundle 清单用的是包名）。 |
+| **D4** | 是否写 `docs/dsh-plugin-dev-notes.md` | **写**，已落盘。 |
+| **D5** | `web` profile 是否也安装插件 | **不装**。只动 `desktop` profile。 |
+| **D6** | `.dsh-src-ref`（355 MB）保留还是删除 | **保留**，并写进仓库 `.gitignore`（它本来就在仓库之外，不会被跟踪）。 |
+| **D7** | 是否把 DSH 源码解包脚本收进仓库 | **收**，见 `tools/extract-asar.mjs`。 |
+
+### 2.1 ⚠️ 唯一剩下的阻塞：GitHub 推送权限
+
+* 本地提交已完成（`main` 领先 `origin/main` 一个 commit），remote 已配置 `origin`（HTTPS）与 `ssh`（SSH）两个地址。
+* `origin`（HTTPS）推送失败：`403 Resource not accessible by personal access token`
+  —— 账号认证成功，但 fine-grained PAT **没有 `Contents: Read and write`**（或没把本仓库勾进它的可访问仓库列表）。
+  **重试无用**，必须改 token 权限或换一条授权通道。
+* 已验证 **SSH 通道本身是通的**（`ssh.github.com:22` 与 `:443` 均可建立连接），
+  只是本机 `~/.ssh/id_rsa` **尚未注册到 GitHub 账号**（`git@github.com: Permission denied (publickey)`）。
+* 两条出路，任选其一：
+  1. **把 `~/.ssh/id_rsa.pub` 加到账号**（一键预填链接见会话回复）→ 之后
+     `git -C D:\ai\project\dsh-plugin push ssh main:main` 即可，无需再动 token。
+  2. **给 token 补权限**：fine-grained token 的 *Repository access* 勾上 `bsgxiaobi/dsh-plugin`，
+     *Permissions → Repository permissions → Contents = Read and write* → 之后 `git push origin main`。
+
 
 ---
 

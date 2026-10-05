@@ -431,3 +431,88 @@ git -C $r remote -v                                          # 阶段 5 后应�
 - `@file` 语法**不支持行范围**：`dsh-file-reference` 只定义 `@path` 与 `@"path with spaces"`（结尾 `/` 表示目录）。所以 `@path#n-m` 只能是纯文本，做成 chip 点击会去找名为 `path#n-m` 的文件而失败。
 - 纯文本 `@file.md` **不会**被渲染成 chip（扫描只认 `@dir/` 与 lexicon 内的名字），文件引用要 chip 必须走 `insertReference`。
 - `plugin_manager` 工具的 `list_bundles` **不含** UI 展示元数据（`meta`）；要看本地化标题/说明得靠 GUI 或 `verify-meta.mjs`。
+
+---
+
+## 8. 执行记录（2026-10-05 实际结果）
+
+> 这一节是**事后补记**：记录实际做了什么、与上面清单的偏差、以及仍未完成的部分。
+> 判定「完成」的硬标准（§2）已满足：**磁盘上每个插件只有一份代码副本，且 DSH 加载的就是那一份。**
+
+### 8.1 逐阶段结果
+
+| 阶段 | 状态 | 实际做法 / 偏差 |
+|---|---|---|
+| **1.1 / 1.2** 建目录 + 复制 | ✅ | 新仓库 `D:\ai\project\dsh-plugin` 已建，两个插件目录已复制（在上一轮会话完成）。删除前用 **SHA256 逐文件比对** 过：除两处有意修改的 `README.md` 外，新旧副本**字节完全一致** |
+| **1.3** 删 tgz | ✅ | 删掉 `dsh-plugin-send-to-chat\dsh-plugin-send-to-chat-0.1.0.tgz`，并由 `.gitignore` 的 `*.tgz` 兜底 |
+| **1.4** 根 `.gitignore` | ✅ | 按 §3.5，另加 `.dsh-src-ref/` 与 `*.bak-*` |
+| **1.5** 根 `README.md` | ✅ | 新增：两个插件简介、目录结构、profile 注册方式、两条最容易踩的坑、许可证说明 |
+| **1.6** `docs/dsh-plugin-dev-notes.md` | ✅ | 按 §7 扩写，另补「宿主端入口文件也必须重启」「各插件占用的 slot 登记」「升级后自检顺序」 |
+| **1.7** `git init` + 首次提交 | ✅ | 见 §8.3 的**偏差 1** |
+| **2.1–2.3** 新工作区 | ✅ | 已在上一轮完成（workspace `935b99e0-…`，path = `D:\ai\project\dsh-plugin`） |
+| **3.1** 备份 | ✅ | 备份 `package.json`、`pnpm-lock.yaml`、`workspace.json`，后缀 `bak-20261005-200628` |
+| **3.2** 改 profile 依赖 | ✅ | 两条 `link:` 均指向 `dsh-plugin/<插件目录>`；**`dsh.profile.bundles` 未动**（仍是包名） |
+| **3.3** `pnpm install` | ✅ | 在 `%DSH_HOME%\profiles\desktop` 执行，`pnpm` 报告 *Already up to date*，但 junction 与 lock 已按新路径重建（§3.4 验证通过） |
+| **3.4 / V2 / V3** 验证 | ✅ | 两个链接均为 `Junction`，Target 指向新路径；lock 里旧路径已消失 |
+| **4.1** 备份 `workspace.json` | ✅ | `workspace.json.bak-20261005-200628` |
+| **4.2** 删除旧目录 | ✅ | 决策 **D1(a)**：两个旧目录已删除（删除前已做 SHA256 比对） |
+| **4.3** 处理旧 workspace 条目 | ✅ | 决策 **D2(a)**：从 `global.workspaceIds` 与 `tables.workspaces` 中移除 `e0598bfd-…`、`e03829e1-…`；JSON 语法已校验 |
+| **4.4** 启动 DSH 跑验证 | ⏳ | **待用户重启 DSH**（见 §8.4） |
+| **5.1 / 5.2 / 5.3** GitHub | ⚠️ | **未完成**：token 缺 `Contents: write`（403）；SSH 通道可达但本机公钥尚未注册。详见 §8.5 |
+| **V1** 副本唯一性 | ✅ | `dsh-plugin` 与两个子目录存在且 `reparse=False`；两个旧路径**已不存在** |
+| **V7** 会话历史 | ✅ | 6 个桶目录全部原样保留；本对话所在桶 `--D-ai-project-dsh-plugin--` 完好，旧桶 `--D-ai-project-dsh-plugin-send-to-chat--` 内 `session-e29dbeb0-…` 实测 **1,519,939 字节（> 1 MB，且比迁移前更大）** |
+| **V8** 插件元数据 | ✅ | `node verify-meta.mjs` 输出 `languages found: en, zh`，`zh` 下 title=`发送到对话框`、icon=544 bytes SVG |
+| **V9** git 仓库 | ⚠️ | 本地 `status` 干净、无 `tgz/node_modules/.bak` 被跟踪；**远程推送未完成**（§8.5） |
+| **V10** 功能回归 | ⏳ | **人工待办**，见 `FOLLOW-UP-WORK.md` §1 |
+
+### 8.2 与清单的偏差（需要知道）
+
+1. **`notifiy` → `notify` 改名（决策 D3=a）**：新仓库里的目录是 `dsh-plugin-notify-and-sound`。
+   清单里凡是写 `dsh-plugin-notifiy-and-sound` 的地方，若指**新仓库内的目录**，实际名字是 `notify`；
+   若指**已删除的旧路径**或**会话历史桶名**，则保持 `notifiy` 不变（桶名由 cwd 派生，不能改）。
+   **包名 `@local/dsh-notify-sound` 始终不变**，bundle 清单不受影响。
+2. **`.gitattributes` 是清单里没有的一步**：新增 `* text=auto eol=lf`，避免 Windows 上出现纯换行符的噪音提交。
+3. **`tools/extract-asar.mjs` 被收进了仓库**（来自 `FOLLOW-UP-WORK.md` 的 D7）——原脚本只存在于 `%TEMP%`，随时会被清理。
+4. **没有做 `web` profile 的安装**（决策 D5=不装）。
+5. **没有手工搬动任何会话桶目录**（遵守 §1.3 事实 B）。
+
+### 8.3 偏差 1 的细节：git 历史基线
+
+远程 `main` 已有一个 `67a7444 Initial commit`（只含 `LICENSE`，Apache-2.0，建仓时由 GitHub 生成）。
+为了不产生无关历史，本次**没有**用 `git init` 后强推，而是：
+
+```powershell
+cd 'D:\ai\project\dsh-plugin'
+git init -b main
+git remote add origin https://github.com/bsgxiaobi/dsh-plugin.git
+git fetch origin main
+git reset --hard origin/main     # 先把 LICENSE 落到工作区，让历史线性
+git add -A
+git commit -m "chore: import send-to-chat and notify-sound plugins"
+```
+
+结果历史为 `67a7444 Initial commit` → `26bf4ba chore: import …`，可快进推送。
+
+### 8.4 重启 DSH 后要确认的（只剩这一步是自动可验的）
+
+1. **设置 → 插件**：`发送到对话框` 应显示**图标 + 中文标题 + 中文说明**（§4 V8）。
+   本机 CLI 已跑通 `verify-meta.mjs`，但 DSH 进程内的 `exports` 缓存**必须重启才刷新**（§5 坑 G2）。
+2. **`plugin_manager` `list_plugins`**：两个插件条目应仍为 `enabled: true` + `fiberPhase: "active"`（§4 V4）。
+3. **`cordis_inspect_query`（client / Slots / listSubTree / `{"root":"shell.overlay"}`）**：`occupants` 里应有 `id: "send-to-chat"`, `active: true`（§4 V5）。
+4. **侧边栏工作区列表**：应只剩 `draw`、`dsh-plugin`、`temp`；若两个旧工作区又冒出来，说明 DSH 在退出时把内存里的旧 `workspace.json` 写回了（§5 坑 G5），在 GUI 里删掉即可，或重新应用 §8.1 的 4.3 改动。
+5. **人工跑 `FOLLOW-UP-WORK.md` §1 的四项交互**。
+
+### 8.5 GitHub 推送的阻塞与出路
+
+* `origin`（HTTPS）推送返回 `403 Resource not accessible by personal access token`：
+  账号认证成功（`gh auth status` 显示 `bsgxiaobi`），但该 fine-grained PAT **没有 `Contents: Read and write`**
+  （或没把 `bsgxiaobi/dsh-plugin` 勾进它的可访问仓库列表）。**重试无效**。
+* 同时确认 **SSH 通道是通的**（`ssh.github.com:22`、`:443` 都能建连），
+  只是本机 `~/.ssh/id_rsa` / `id_ed25519` **尚未注册到该账号** → `git@github.com: Permission denied (publickey)`。
+* 仓库已配两个 remote：`origin` = HTTPS，`ssh` = `git@github.com:bsgxiaobi/dsh-plugin.git`。
+* 两条出路（任选其一）：
+  1. 在 GitHub 账号里加入本机公钥 `~/.ssh/id_rsa.pub`，然后
+     `git -C D:\ai\project\dsh-plugin push ssh main:main`；
+  2. 给 token 补权限（*Repository access* 勾本仓库；*Contents = Read and write*），然后 `git push origin main`。
+* 本地提交不会丢：`git status` 干净，`main` 领先 `origin/main` 一个 commit。
+
