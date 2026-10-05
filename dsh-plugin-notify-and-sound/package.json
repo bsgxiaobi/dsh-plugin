@@ -1,0 +1,40 @@
+{
+  "name": "@local/dsh-notify-sound",
+  "version": "1.0.0",
+  "private": true,
+  "description": "When a turn finishes, a completion card appears both in the DSH top-right corner and in the Windows notification area, with a sound; the same alerts fire when the agent needs your choice or approval.",
+  "type": "module",
+  "icon": "./icon.svg",
+  "main": "./host.js",
+  "exports": {
+    ".": "./host.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "files": [
+    "host.js",
+    "client.js",
+    "cordis.patch.yml",
+    "icon.svg",
+    "README.md",
+    "locale/*.json"
+  ],
+  "peerDependencies": {
+    "@deepseek-ai/schemastery": "*"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/schemastery": {
+      "optional": true
+    }
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": []
+    }
+  }
+}

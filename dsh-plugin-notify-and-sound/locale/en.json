@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Notifications and sounds",
+    "description": "When a turn finishes, a completion card appears both in the DSH top-right corner and in the Windows notification area, with a sound; the same alerts fire when the agent needs your choice or approval."
+  }
+}

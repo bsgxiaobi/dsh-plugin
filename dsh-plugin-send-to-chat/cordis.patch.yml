@@ -1,0 +1,9 @@
+# The send-to-chat bundle patch: one row over the profile root.
+#
+# The row names this same package. A bundle may insert its own package — the
+# Loader resolves the name to this package's `main` (the no-op node half) and
+# discovers the browser half through the same package's `dsh.client`
+# declaration, which is what `dsh-client-modules` scans.
+- insert:
+    - id: send-to-chat
+      name: 'dsh-plugin-send-to-chat'

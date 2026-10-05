@@ -1,0 +1,5 @@
+node_modules/
+*.log
+
+# Local verification artifacts
+.dsh-src-ref/

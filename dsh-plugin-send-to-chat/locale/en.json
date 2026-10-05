@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Send to chat",
+    "description": "Send a workspace file, folder, or selected line range from the sidebar into the chat composer as an @ reference."
+  }
+}

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Notifications and sounds">
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="#247bbf" />
+  <path d="M28 46a5 5 0 0 0 10 0z" fill="#ffffff" />
+  <path d="M33 14a11 11 0 0 0-11 11v9.6l-3.2 5.1A1.4 1.4 0 0 0 20 42h26a1.4 1.4 0 0 0 1.2-2.3L44 34.6V25a11 11 0 0 0-11-11z" fill="#ffffff" />
+  <g fill="none" stroke="#ffffff" stroke-linecap="round" stroke-width="3">
+    <path d="M48 20a11 11 0 0 1 0 16" opacity="0.85" />
+    <path d="M53 15a18 18 0 0 1 0 26" opacity="0.55" />
+  </g>
+</svg>

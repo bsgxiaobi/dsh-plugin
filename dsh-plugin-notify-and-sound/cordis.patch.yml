@@ -1,0 +1,33 @@
+# Adds the notification + sound plugin to the Web composition.
+#
+# The Host half owns the settings below and pushes notices to the browser half
+# over a Server-Sent-Events route; the browser half renders the top-right
+# notification cards, synthesizes the built-in sounds, and raises the Windows
+# system notification.
+#
+# Configure everything in the page: Settings -> Plugins -> "Notifications and
+# sounds". The page stores only what you change, in `$DSH_HOME/notify-sound.json`,
+# and "reset to default" removes a field from it. The values below are the
+# default layer the page falls back to:
+#
+#   notify               true    notify on a finished turn, an approval, a choice
+#   sound                true    play a sound
+#   soundSource          chime   chime | bell | notify | custom
+#   customSoundPath      ""      path of the audio file for `custom`; the page
+#                                fills it from the machine's own file chooser
+#   toastDurationMs      3000    how long a card stays on screen
+#   onlyWhenUnfocused    false   stay quiet while the page is focused
+#
+# The card and the Windows notification are not switchable: every notice shows
+# both, and the stack keeps three cards. Sounds always play at full level.
+
+- insert:
+    - id: notify-sound
+      name: '@local/dsh-notify-sound'
+      config:
+        notify: true
+        sound: true
+        soundSource: chime
+        customSoundPath: ''
+        toastDurationMs: 3000
+        onlyWhenUnfocused: false

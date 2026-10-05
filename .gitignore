@@ -1,0 +1,18 @@
+# 依赖
+node_modules/
+
+# 构建产物（可用 `npm pack` 随时重建）
+*.tgz
+
+# 日志与系统垃圾
+*.log
+.DS_Store
+Thumbs.db
+
+# DSH app.asar 解包出来的源码树（约 355 MB）。
+# 它位于本仓库之外（D:\ai\project\.dsh-src-ref），正常不会被跟踪；
+# 这一行只是防止有人把副本放进仓库。重建方式见 tools/extract-asar.mjs。
+.dsh-src-ref/
+
+# 迁移/改配置时产生的备份
+*.bak-*
