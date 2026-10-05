@@ -91,7 +91,8 @@
 
 ### 方法 D：打包传递
 
-仓库里带了 `dsh-plugin-send-to-chat-0.1.0.tgz`（`npm pack` 产物）。传到目标机器后解压（会解出 `package/` 目录，建议重命名成 `dsh-plugin-send-to-chat`），再按方法 A 运行 `install.mjs`。
+用 `npm pack` 生成 tgz（构建产物不纳入版本控制，`.gitignore` 已忽略 `*.tgz`），传到目标机器后解压
+（会解出 `package/` 目录，建议重命名成 `dsh-plugin-send-to-chat`），再按方法 A 运行 `install.mjs`。
 
 ### 方法 E：发布到 npm / 私有 registry（多台机器最省事）
 
