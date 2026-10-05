@@ -497,6 +497,12 @@ git commit -m "chore: import send-to-chat and notify-sound plugins"
 
 1. **设置 → 插件**：`发送到对话框` 应显示**图标 + 中文标题 + 中文说明**（§4 V8）。
    本机 CLI 已跑通 `verify-meta.mjs`，但 DSH 进程内的 `exports` 缓存**必须重启才刷新**（§5 坑 G2）。
+   **⚠️ 已实测确认**：迁移后若不重启，插件页会显示成「包名 + 通用拼图图标」——
+   Node 的解析器缓存了 junction 的旧 realpath，仍去**已删除的旧目录**读 `locale/en.json`，
+   `ENOENT` → `readPluginMeta` 返回 `undefined` → 回退成包名。这与 `exports` 写没写**无关**。
+   用 DSH 自己的 `readPluginMeta` 在新进程里对照验证过：profile 链接解析出
+   `发送到对话框` / `通知与提示音` + 图标；已删旧路径解析出 `undefined`。
+   （详见 `docs/dsh-plugin-dev-notes.md` §3.1 坑 G2b。）
 2. **`plugin_manager` `list_plugins`**：两个插件条目应仍为 `enabled: true` + `fiberPhase: "active"`（§4 V4）。
 3. **`cordis_inspect_query`（client / Slots / listSubTree / `{"root":"shell.overlay"}`）**：`occupants` 里应有 `id: "send-to-chat"`, `active: true`（§4 V5）。
 4. **侧边栏工作区列表**：应只剩 `draw`、`dsh-plugin`、`temp`；若两个旧工作区又冒出来，说明 DSH 在退出时把内存里的旧 `workspace.json` 写回了（§5 坑 G5），在 GUI 里删掉即可，或重新应用 §8.1 的 4.3 改动。

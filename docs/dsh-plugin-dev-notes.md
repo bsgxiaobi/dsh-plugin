@@ -95,6 +95,28 @@ DSH 通过 Node **内部 ESM 解析器**读插件元数据
 | `locale/*.json` 的**文案内容**（不动 `exports`） | 重启后即可热改 |
 | **宿主端入口文件**（`host.js` / `lib/index.js`） | **必须重启 DSH**（入口解析在进程内缓存，重新启用同一 bundle 不会重新解析） |
 
+### 3.1 坑（G2b）：迁移插件目录后，插件页会显示成「包名 + 通用拼图图标」
+
+**症状**：把插件目录搬到新路径、profile 的 junction 也重指向了，刷新插件页却**只看到包名**，
+没有中文标题、没有说明、图标是通用拼图。**这与 `exports` 写没写无关**（`verify-meta.mjs` 会照常通过）。
+
+**成因**：Node 的模块解析器在**进程内缓存了 junction 的 realpath**。运行中的 DSH 仍然认为
+`dsh-plugin-send-to-chat` 住在**旧目录**，于是去 `<旧目录>\locale\en.json` 找元数据；
+旧目录已被删 → `ENOENT` → `optionalResourcePath` 吞掉错误返回 `undefined` →
+`readPluginMeta` 因 title/description/icon 全空而**返回 `undefined`**
+（见 `@deepseek-ai/dsh-app-boot` 的 `readPluginMeta` / `missingResource`）→
+插件管理器只好回退成 `name` + 通用图标。
+
+**识别方法**（新进程 vs 旧进程对照，一跑就分晓）：新进程能解析出元数据、而已删的旧路径解析出 `undefined`，
+就说明是缓存陈旧，不是包的问题。
+
+**修复**：重启 DSH。**或者**（不重启时的临时解）把旧路径重建为指向新目录的 **junction 垫片** ——
+缓存里的旧路径重新存在，读取即落到新内容。垫片不是副本，不违反「只有一份代码」。
+
+**通用结论**：**只要插件目录被移动/重命名过，就必须重启 DSH**；改 `exports`、移动目录、换 junction 目标
+三者都属于「解析结果被进程缓存住」的情形。
+
+
 ---
 
 ## 4. 浏览器端可用模块
